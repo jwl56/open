@@ -1,0 +1,110 @@
+Context	Type	구분	default	튜닝값	내용
+postmaster	string	listen_addresses	‘localhost’	 '*' 	"Listen 대상 IP 설정
+‘*’ 는 All IP"
+	integer	port	5444	5445	"서버 Listen TCP port 
+보안을 위해 Port 변경 필요 (예> 5445)"
+		max_connections	100	필요값적용	"최대 connection 수
+WAS 의 connection pool 보다 커야함
+System 관리 및 모니터링용 여유 connection 필요
+Connection slot 당 최대 약 400 bytes 의 shared memory 소요됨
+추가적으로 max_loc_per_transaction 위한 lock space 필요
+최대 300을 넘지 않도록 설정-Connection Pool 사용하지 않는 경우만 해당"
+postmaster	postmaster	shared_buffers	128MB	물리메모리 약 25% ~ 50%	"디스크에서 필요한 데이터를 shared bufffers 로 먼저 읽고 shared buffers 에서 읽고 쓰기를 처리.  이러한 shared buffers 크기 설정
+최대 8GB를 넘지 않도록 설정
+*참조: 1G기가 이상 물리 메모리인 경우 25% 정도로 설정 최대 8GB를 넘지 않도록 함"
+postmaster	postmaster	bgwriter_dealy	200	10	"background writer 동작 간 Sleep 타임 값. 단위: ms 
+대부분의 시스템에 효과적인 sleep delay는 10임
+참조: Postgresl_Plus_Enterpirse_Edition_Guide_9.5.pdf 매뉴얼 참조"
+postmaster	string	huge_page	try	try	"huge_page 사용 시 on 또는 try설정.(off 사용안함)
+try는 huge_page 사용을 시도해 보고, 설정이 안되어 있을 경우 off
+*참조: 
+레드헷 huga_page 설정 방법 참조
+https://access.redhat.com/solutions/46326"
+postmaster	string	THP(Transparent Huge Page)	enable	never	"EDB 벤더의 경우 특정 데이터 타입(blob) 접근 시에는 성능 개선 효과가 있는 것으로 설명. Redhat 6.8 Kernel 버전에 이슈 존재하는 것으로 확인함.
+THP 성능 저하 이슈로 인한 장애 방지 차원에서 Disable 권고함
+*참조: 
+레드헷 THP 이슈 - ttps://access.redhat.com/solutions/2607721
+EDB Case 530440"
+user	integer	temp_buffers	8MB	8MB	"각 Database session 에서 사용하는 temporary buffers 최대 수 설정 ( 업무 특성 따라 조정 )
+Session 단위."
+		work_mem	4MB	16MB	"내부 정렬 및 Hash table 작업 위해 사용되는 메모리 크기 설정. Session 단위.
+해당 설정 초과하는 작업 필요 시 Temporary disk 로 전환 하여 수행."
+		maintenance_work_mem	64MB	100MB	"Maintenance 작업 ( VACUUM, CREATE INDEX, ALTER TABLE ADD FOREIGN KEY ) 시 사용되는 메모리 크기 설정 ( 대상 크기 따라 조정 )
+Session 단위.
+*참조: 시스템 메모리 5% 정도로 설정해서 시작하고 512MB를 넘지 않도록 설정"
+	integer	random_page_cost	4	2	"랜덤 페이지 ( 데이터가 저장된 디스크의 불연속 영역 ) 사용 시 추정 비용 ( 4x slower ), SSD 사용 시 2 또는 1 설정
+* 참조:
+해당 값을 seq_page_cost 근접 값으로 설정 시 인덱스 스캔을 선호하게 됨
+Database가 물리 메모리보다 매우 클 경우 2 설정 권고"
+	Integer	effective_cache_size	4GB	" 물리메모리 
+ 약 75%"	"Index scan 비용 추정 시 사용
+단일 쿼리가 사용하는 디스크 캐시의 유효크기 추정 .
+값이 높을 경우 index scan 사용됨. 
+값이 낮을 경우 sequential scan 사용됨
+*참조: 물리 메모리의 50% 비율로의 설정은 안정적 설정이며,
+         75% 비율로의 설정은 aggressive한 설정 임
+         EDB CASE 530440에 따르면 75%로 설정 권고함"
+postmaster	enum	wal_level	minimal	archive	"WAL 에 기록되는 정보의 양 설정. archive 설정 권고
+minimal/archive/hot_standby"
+	bool	archive_mode	off	on	"on 이면 archive_command 로 설정한 command 로 아카이빙 수행. 
+wal_level=minimal 일 경우 on 불가 "
+	integer	wal_buffers	-1	16MB	"WAL File 로 쓰기 전 WAL Data 보관 위한 공유메모리 크기. 16MB 가 최대이며 이 경우 WAL File 의 100% 를 메모리에서 가질 수 있음
+default -1 은 shared buffers 의 1/32 ( 약 3% ) 사용 
+*참조: 16MB 초과 설정하지 말것. OS Kernel 파라미터 관련 에러 없는 지 확인 필요"
+sighup	integer	max_wal_size	1GB	4GB	"checkpoint 사이의 WAL file segment 최대 사이즈 ( 각 16MB ), 업무에 따라 1GB~ 4GB,
+너무 크게 설정 시 복구 속도 느려짐
+1GB 이상 설정은 bulk 로딩에만 사용"
+		min_wal_size	80MB	1GB	
+	real	checkpoint_completion_target	0.5	0.9	"다음 checkpoint 가 발생할 시점이 몇 % 가까워졌을 때 현재 checkpoint 를 완료할지 정하는 값
+0.5 는 다음 checkpoint 가 예상되는 시점의 50% 시간이 되었을 때 현재 checkpoint 완료를 목표로 함"
+	integer	checkpoint_timeout	5min	900(15min)	"자동 WAL checkpoint간 최대 시간
+값 증가시 crash recovery 시간은 증가하지만 시스템 I/O 로드는 줄이들게 됨
+shared_buffers 크게 설정 시 성능 향상 됨"
+postmaster	boolean	logging_collector	off	on	"on 은 로그 파일 생성 ( stderr, csvlog )
+관리자 별도 관리 (삭제) 필요"
+superuser	enum	log_statement	 ‘none’	 ‘DDL’	"none/ddl/mod/all
+none 은 명령문 수준 정보 미로깅
+ddl 은 DDL ( CREATE 등 ) 로깅. OBJECT 관리
+mod 는 SELECT 제외한 DML 로깅
+all 은 모든 명령문 로깅. (보안 조건에 따라 설정)
+*참조: DDL 수행 모니터링 하는 것으로 변경"
+sighup	string	log_destination	 ‘stderr’	 ‘stderr’	Platform 에 따라 stderr, csvlog, syslog,  eventlog
+		log_directory	 ‘pg_log’	 ‘pg_log’	"기본 위치 ""$PGDATA/pg_log"" 
+별도의 Filesystem으로 분리를 원할 경우 Symbolic Link 사용 가능"
+		log_filename	‘enterprisedb-%Y-%m-%d.log’	 ‘DB명_%Y-%m-%d.log’	enterprisedb-2016-03-11.log
+		log_rotation_age	1d	7d	7일 주기로 Log 파일 Rotation
+		log_rotation_size 	10M	0	Log 파일 크기에 의한 log file rotation 중지 
+		log_line_prefix 	'%t'	'[%e][%h:%u:%d:%p] %t'	"%e SQLSTATE error code
+%u User name
+%d Database name
+%h Remote host name or IP address
+%t Time stamp without milliseconds"
+		log_min_messages	notice	debug2	"서버 레벨의 로그 레벨을 지정
+원인 분석을 위해 최소 debug2 레벨 이상으로 설정 권고(EDB)
+*참조: 로그 발생량 모니터링 필요"
+superuser	integer	log_min_duration_statement	-1	필요시설정	"설정 값보다 오래 수행한 autovacuum 작업 로깅
+-1 은 비활성화
+ 0 은 모든 작업 및 소요 시간 로깅
+ 0 이상은 해당 값 ( milliseconds ) 이상 소요된 모든 작업 로깅(slow query)
+*참조: SQL 튜닝 목적으로 사용, 단위:ms"
+superuser	boolean	log_connections	off	on	on은 connection 정보 남김.
+		log_disconnections	off	on	on은 disconnection 정보 남김.
+postmaster	string	oracle_home	‘’	/opt/PostgresPlus/9.5AS/oracle'	"Oracle 서버에 대한 Database links 연결 설정
+oracle_instantclient가 설치된 위치 지정"
+postmaster	string	edb_stmt_level_tx	off	 on	"on 은 Oracle 호환 설정
+transaction 내에서 취소된 SQL 명령어에 대한 자동 rollback 분리
+On : 정상 DML    반영, 오류 DML 미반영
+Off : 정상 DML 미반영, 오류 DML 미반영"
+postmaster	integer	edb_dynatune	0	100	"서버의 시스템 자원을 얼마나 사용할 지 결정하는 파라미터
+PPAS 전용 서버인 경우 100으로 설정"
+postmaster	integer	edb_dynatune_profile	oltp	mixed	"워크로드 타입을 결정하는 파라미터
+OLTP, DW 업무가 혼재되어 유입되는 경우 mixed로 설정"
+autovacuum	integer	autovacuum_vacuum_cost_delay 	20	2	"단위:ms
+기본값은 매우 보수적인 값이며, 변경 내용을 모두 반영하기 어렵다. 
+2ms 이하로 설정하는 것이 바람직하다.
+*참조: EDB Case 530440"
+autovacuum	integer	autovacuum_vacuum_cost_limit 	200	800	"기본값은 매우 낮음, Busy 시스템에 800~1000 설정 권고.
+Vacuum 프로세스가 Sleep 전 더 많은 작업을 수행할 수 있다.
+*참조: EDB Case 530440"
+postmaster	integer	archive_timeout	0	1800	"1800s 마다 WAL Log 스위치를 강제로 수행하게 함. 
+RPO 관점에서 Transaction 유실을 최소화 하기 위해 설정을 권고 함."
