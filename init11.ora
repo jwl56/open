@@ -1,0 +1,51 @@
+*.audit_file_dest='/oracle11/admin/TEST/adump'
+*.compatible='11.2.0.0.0'
+*.control_files='/oracle11/data/TEST/control01.ctl','/oracle11/data/TEST/control02.ctl'
+*.db_block_size=8192
+*.db_domain=''
+*.db_name=TEST
+*.diagnostic_dest='/oracle11/product/11.2'
+*.log_archive_dest=''
+*.log_archive_dest_1='LOCATION=/oracle11/arch/TEST'
+*.open_cursors=300
+*.processes=500
+*.remote_login_passwordfile='EXCLUSIVE'
+*.undo_tablespace='UNDOTBS1'
+
+##### System Parameters
+*._cleanup_rollback_entries=2000
+*._rollback_segment_count=2000
+*._undo_autotune=false
+*._add_col_optim_enabled=false
+*.deferred_segment_creation=false
+*.event='44951 trace name context forever, level 1024:10555 trace name context forever, level 1:28401 trace name context forever, level 1'
+*.parallel_force_local=true
+*.sec_case_sensitive_logon=false
+*.audit_trail=none
+*.resource_manager_plan='FORCE:'
+*._use_adaptive_log_file_sync=false
+*.db_files=5000
+*._object_statistics=false
+*._library_cache_advice=false
+*.db_cache_advice=off
+*._datafile_write_errors_crash_instance=false
+*._disable_system_state=10
+
+##### Memory Parameters
+*._memory_imm_mode_without_autosga=false
+*._PX_use_large_pool=true
+*.memory_target=0
+*.sga_target=0
+*.streams_pool_size=512m
+*.large_pool_size=512m
+*.shared_pool_size=500m
+*.shared_pool_reserved_size=50m
+*.db_cache_size=1G
+*.pga_aggregate_target=500m
+*.parallel_execution_message_size=16384
+
+##### Optimizer Parameters
+*._optim_peek_user_binds=false
+*._optimizer_null_aware_antijoin=false
+*.optimizer_secure_view_merging=false
+*._optimizer_use_feedback=false
